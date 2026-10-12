@@ -34,6 +34,14 @@ function matchesFilter(order: Order, filter: Filter): boolean {
   return order.status === filter;
 }
 
+function matchesKeyword(order: Order, keyword: string): boolean {
+  const needle = keyword.toLowerCase();
+  return (
+    order.shopName.toLowerCase().includes(needle) ||
+    order.items.some((item) => item.title.toLowerCase().includes(needle))
+  );
+}
+
 export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const searchParams = useSearchParams();
@@ -53,7 +61,7 @@ export default function OrdersTable() {
     return (orders ?? []).filter(
       (order) =>
         matchesFilter(order, filter) &&
-        (keyword === "" || order.shopName.includes(keyword)),
+        (keyword === "" || matchesKeyword(order, keyword)),
     );
   }, [orders, filter, search]);
 
@@ -98,13 +106,13 @@ export default function OrdersTable() {
           ))}
         </div>
         <label className="flex items-center gap-2">
-          <span className="whitespace-nowrap text-base">ค้นหาร้าน</span>
+          <span className="whitespace-nowrap text-base">ค้นหา</span>
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="พิมพ์ชื่อร้าน"
-            className="w-full rounded-md border border-border bg-surface px-3 py-1.5 md:w-56"
+            placeholder="ชื่อร้านหรือชื่อหนังสือ"
+            className="w-full rounded-md border border-border bg-surface px-3 py-1.5 md:w-72"
           />
         </label>
       </div>

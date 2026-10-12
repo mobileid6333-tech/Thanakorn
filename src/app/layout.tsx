@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import SiteNav from "@/components/SiteNav";
+import { PUBLISHER_NAME, SYSTEM_NAME } from "@/lib/site";
 import "./globals.css";
 
 const sarabun = Sarabun({
@@ -10,7 +11,7 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบติดตามคำสั่งซื้อ | สำนักพิมพ์อมตะ",
+  title: `${SYSTEM_NAME} | ระบบติดตามคำสั่งซื้อ ${PUBLISHER_NAME}`,
   description: "ระบบติดตามคำสั่งซื้อหนังสือจากร้านค้า สำนักพิมพ์อมตะ",
 };
 
