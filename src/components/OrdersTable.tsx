@@ -36,9 +36,13 @@ function matchesFilter(order: Order, filter: Filter): boolean {
 
 export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[] | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const searchParams = useSearchParams();
+  const [filter, setFilter] = useState<Filter>(() => {
+    const requested = searchParams.get("filter");
+    return FILTERS.find((option) => option.value === requested)?.value ?? "all";
+  });
   const [search, setSearch] = useState("");
-  const addedNo = useSearchParams().get("added");
+  const addedNo = searchParams.get("added");
 
   useEffect(() => {
     listOrders().then(setOrders);
