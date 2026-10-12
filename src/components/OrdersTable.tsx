@@ -119,16 +119,16 @@ export default function OrdersTable() {
             <table className="w-full text-left text-base">
               <thead className="border-b border-border bg-primary-soft text-sm text-primary">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">เลขที่</th>
-                  <th className="px-4 py-3 font-semibold">ร้าน</th>
-                  <th className="px-4 py-3 font-semibold">หนังสือ</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  <th className="px-3 py-3 font-semibold">เลขที่</th>
+                  <th className="px-3 py-3 font-semibold">ร้าน</th>
+                  <th className="px-3 py-3 font-semibold">หนังสือ</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-semibold">
                     จำนวน (เล่ม)
                   </th>
-                  <th className="px-4 py-3 text-right font-semibold">ยอดเงิน</th>
-                  <th className="px-4 py-3 font-semibold">วันที่สั่ง</th>
-                  <th className="px-4 py-3 font-semibold">สถานะ</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">
+                  <th className="px-3 py-3 text-right font-semibold">ยอดเงิน</th>
+                  <th className="px-3 py-3 font-semibold">วันที่สั่ง</th>
+                  <th className="px-3 py-3 font-semibold">สถานะ</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-semibold">
                     เปลี่ยนสถานะ
                   </th>
                 </tr>
@@ -137,13 +137,13 @@ export default function OrdersTable() {
                 {visible.map((order) => (
                   <tr
                     key={order.id}
-                    className={`align-top ${order.orderNo === addedNo ? "bg-emerald-50" : ""}`}
+                    className={`align-top ${rowTone(order, addedNo)}`}
                   >
-                    <td className="whitespace-nowrap px-4 py-3 font-medium">
+                    <td className="whitespace-nowrap px-3 py-3 font-medium">
                       {order.orderNo}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">{order.shopName}</td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-3 py-3">{order.shopName}</td>
+                    <td className="px-3 py-3">
                       <ul>
                         {order.items.map((item, index) => (
                           <li key={index} className="whitespace-nowrap">
@@ -152,25 +152,25 @@ export default function OrdersTable() {
                         ))}
                       </ul>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       <ul>
                         {order.items.map((item, index) => (
                           <li key={index}>{item.quantity.toLocaleString("th-TH")}</li>
                         ))}
                       </ul>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums">
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-medium tabular-nums">
                       {formatBaht(orderTotal(order))}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">
+                    <td className="whitespace-nowrap px-3 py-3">
                       {formatThaiDate(order.orderDate)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3">
                       <StatusBadge status={order.status} />
                       <OverdueNote order={order} />
                     </td>
-                    <td className="px-4 py-3">
-                      <StatusSelect order={order} onChange={changeStatus} />
+                    <td className="px-3 py-3">
+                      <AdvanceStatusButton order={order} onChange={changeStatus} />
                     </td>
                   </tr>
                 ))}
@@ -182,11 +182,7 @@ export default function OrdersTable() {
             {visible.map((order) => (
               <li
                 key={order.id}
-                className={`rounded-lg border p-4 ${
-                  order.orderNo === addedNo
-                    ? "border-emerald-300 bg-emerald-50"
-                    : "border-border bg-surface"
-                }`}
+                className={`rounded-lg border p-4 ${cardTone(order, addedNo)}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -211,7 +207,7 @@ export default function OrdersTable() {
                   ))}
                 </ul>
                 <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
-                  <StatusSelect order={order} onChange={changeStatus} />
+                  <AdvanceStatusButton order={order} onChange={changeStatus} />
                   <span className="text-lg font-semibold tabular-nums">
                     {formatBaht(orderTotal(order))}
                   </span>
@@ -234,25 +230,42 @@ function OverdueNote({ order }: { order: Order }) {
   );
 }
 
-function StatusSelect({
+function rowTone(order: Order, addedNo: string | null) {
+  if (isOverdue(order)) return "bg-red-50 shadow-[inset_4px_0_0_0_#b91c1c]";
+  if (order.orderNo === addedNo) return "bg-emerald-50";
+  return "";
+}
+
+function cardTone(order: Order, addedNo: string | null) {
+  if (isOverdue(order)) return "border-red-300 border-l-4 border-l-red-700 bg-red-50";
+  if (order.orderNo === addedNo) return "border-emerald-300 bg-emerald-50";
+  return "border-border bg-surface";
+}
+
+const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  pending: "shipped",
+  shipped: "paid",
+};
+
+function AdvanceStatusButton({
   order,
   onChange,
 }: {
   order: Order;
   onChange: (id: string, status: OrderStatus) => void;
 }) {
+  const next = NEXT_STATUS[order.status];
+  if (!next) {
+    return <span className="whitespace-nowrap text-base text-muted">เสร็จสิ้น</span>;
+  }
   return (
-    <select
-      value={order.status}
-      onChange={(event) => onChange(order.id, event.target.value as OrderStatus)}
-      aria-label={`เปลี่ยนสถานะ ${order.orderNo}`}
-      className="rounded-md border border-border bg-surface px-2 py-1 text-base"
+    <button
+      type="button"
+      onClick={() => onChange(order.id, next)}
+      aria-label={`เปลี่ยนสถานะ ${order.orderNo} เป็น${STATUS_LABELS[next]}`}
+      className="whitespace-nowrap rounded-md border border-primary bg-surface px-3 py-1 text-base text-primary hover:bg-primary-soft"
     >
-      {ORDER_STATUSES.map((status) => (
-        <option key={status} value={status}>
-          {STATUS_LABELS[status]}
-        </option>
-      ))}
-    </select>
+      เป็น{STATUS_LABELS[next]} &rarr;
+    </button>
   );
 }
