@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import OrdersTable from "@/components/OrdersTable";
 
@@ -18,7 +19,9 @@ export default function OrdersPage() {
           เพิ่มคำสั่งซื้อ
         </Link>
       </div>
-      <OrdersTable />
+      <Suspense fallback={<p className="text-muted">กำลังโหลดข้อมูล...</p>}>
+        <OrdersTable />
+      </Suspense>
     </div>
   );
 }

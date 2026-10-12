@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import { listOrders, updateOrderStatus } from "@/lib/order-store";
 import {
@@ -37,6 +38,7 @@ export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
+  const addedNo = useSearchParams().get("added");
 
   useEffect(() => {
     listOrders().then(setOrders);
@@ -60,8 +62,19 @@ export default function OrdersTable() {
     return <p className="text-muted">กำลังโหลดข้อมูล...</p>;
   }
 
+  const added = orders.find((order) => order.orderNo === addedNo);
+
   return (
     <div className="space-y-4">
+      {added && (
+        <div
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800"
+        >
+          บันทึกคำสั่งซื้อเลขที่ {added.orderNo} ของ{added.shopName} เรียบร้อยแล้ว
+          ยอดเงิน {formatBaht(orderTotal(added))}
+        </div>
+      )}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2" role="group" aria-label="กรองตามสถานะ">
           {FILTERS.map((option) => (
@@ -122,7 +135,10 @@ export default function OrdersTable() {
               </thead>
               <tbody className="divide-y divide-border">
                 {visible.map((order) => (
-                  <tr key={order.id} className="align-top">
+                  <tr
+                    key={order.id}
+                    className={`align-top ${order.orderNo === addedNo ? "bg-emerald-50" : ""}`}
+                  >
                     <td className="whitespace-nowrap px-4 py-3 font-medium">
                       {order.orderNo}
                     </td>
@@ -166,7 +182,11 @@ export default function OrdersTable() {
             {visible.map((order) => (
               <li
                 key={order.id}
-                className="rounded-lg border border-border bg-surface p-4"
+                className={`rounded-lg border p-4 ${
+                  order.orderNo === addedNo
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-border bg-surface"
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

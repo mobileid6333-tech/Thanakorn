@@ -4,6 +4,7 @@
 
 import type { Order, OrderStatus } from "./orders";
 import { createSampleOrders } from "./sample-orders";
+import { BOOKS, SHOPS, type Book } from "./catalog";
 
 const STORAGE_KEY = "amata-orders-v1";
 
@@ -31,6 +32,32 @@ export async function listOrders(): Promise<Order[]> {
       b.orderDate.localeCompare(a.orderDate) ||
       b.orderNo.localeCompare(a.orderNo),
   );
+}
+
+export type NewOrder = Pick<Order, "shopName" | "orderDate" | "items">;
+
+export async function addOrder(input: NewOrder): Promise<Order> {
+  const orders = readAll();
+  const lastNo = orders.reduce(
+    (max, order) => Math.max(max, Number(order.orderNo.replace(/\D/g, "")) || 0),
+    0,
+  );
+  const order: Order = {
+    ...input,
+    id: crypto.randomUUID(),
+    orderNo: `AMT-${String(lastNo + 1).padStart(4, "0")}`,
+    status: "pending",
+  };
+  writeAll([...orders, order]);
+  return order;
+}
+
+export async function listShops(): Promise<string[]> {
+  return SHOPS;
+}
+
+export async function listBooks(): Promise<Book[]> {
+  return BOOKS;
 }
 
 export async function updateOrderStatus(
