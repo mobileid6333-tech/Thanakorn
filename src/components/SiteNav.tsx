@@ -15,7 +15,7 @@ export default function SiteNav() {
 
   return (
     <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <Link href="/" className="leading-tight">
           <span className="block text-xl font-bold text-primary">
             สำนักพิมพ์อมตะ
