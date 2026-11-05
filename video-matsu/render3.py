@@ -37,8 +37,8 @@ SHOTS = [
     ('07878', 3.0, 1.0, 'none', 0.05),
     ('07879', 6.0, 1.0, 'none', 0.05),
     # 14–19.5 FINAL CTA
-    ('IMG@full', 0, 2.0, 'cta', 0.10),
-    ('07879', 2.5, 3.5, 'end', 0.05),
+    ('IMG@pan', 0, 2.5, 'cta', 0.0),
+    ('07879', 2.5, 3.0, 'end', 0.05),
 ]
 
 
@@ -87,7 +87,12 @@ for i, (name, ss, dur, kind, zoom) in enumerate(SHOTS):
     if name.startswith('IMG@'):
         inp = ['-loop', '1', '-t', f'{length}', '-i', src(name)]
         look = 'eq=contrast=1.04:saturation=1.12:brightness=0.03'
-        if name == 'IMG@full':
+        if name == 'IMG@pan':
+            # ภาพเต็มจอ ค่อย ๆ เลื่อนจากซ้ายไปขวา (เร่งช้า-ผ่อนช้า) ให้เห็นหลายเมนู
+            x0, x1 = 200 * 2.65, 1300 * 2.65
+            base = (f"scale=-2:3840,crop=2160:3840:x='{x0}+({x1 - x0})*(1-cos(PI*t/{length}))/2':y=0,"
+                    f'scale=1080:1920,setsar=1,{look}')
+        elif name == 'IMG@full':
             # ภาพเต็ม (ทุกเมนู) วางกลางจอ พื้นหลังเป็นภาพเดียวกันแบบเบลอ
             base = (f'split[a][b];[a]crop=815:1449:880:0,scale=1080:1920,boxblur=30:2,eq=brightness=-0.12[bg];'
                     f'[b]scale=1080:-2[fg];[bg][fg]overlay=0:(H-h)/2,setsar=1,{look}')
