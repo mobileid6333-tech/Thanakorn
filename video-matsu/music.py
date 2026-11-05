@@ -10,6 +10,9 @@ out_path, total = sys.argv[1], float(sys.argv[2])
 cuts = [float(x) for x in sys.argv[3:]]
 END = cuts[-1]                       # จุดขึ้นข้อความปิดท้าย
 BREAK = END - 2.5                    # ช่วงภาพเด่น: เบาลงก่อนปิด
+import os
+# จุดเริ่มช่วงที่ 2 และ 3 ของคลิป (ปรับได้ผ่านตัวแปร SECTIONS)
+S1, S2 = (float(x) for x in os.environ.get('SECTIONS', '5,15').split(','))
 N = int(SR * (total + 0.1))
 rng = np.random.default_rng(11)
 
@@ -124,7 +127,7 @@ for b in range(nbars):
         if t >= BREAK:
             v *= 0.55
         arp.add(koto(nm, 0.45), t, v, pan=-0.35 if s % 2 else 0.35)
-        if 15.0 <= t < BREAK and s % 2 == 0:      # ช่วงงานคึกคัก: เพิ่มชั้นเสียงสูง
+        if S2 <= t < BREAK and s % 2 == 0:      # ช่วงงานคึกคัก: เพิ่มชั้นเสียงสูง
             up = nm[:-1] + str(int(nm[-1]) + 1)
             if hz(up) < 1400:
                 arp.add(koto(up, 0.35), t + 0.0625, 0.18, pan=0.5)
@@ -144,20 +147,29 @@ for b in range(nbars):
         n = int(SR * 2.3); tt = np.arange(n) / SR
         sig = sum(saw(hz(nm), n, d) for nm in chord for d in (-0.004, 0.004))
         swell = np.minimum(1, tt / 0.6) * np.minimum(1, (2.3 - tt) / 0.3)
-        lvl = 0.10 if t0 < 5 else 0.13
+        lvl = 0.10 if t0 < S1 else 0.13
         if t0 >= BREAK - 0.5:
             lvl = 0.16
         pad.add(sig * swell, t0, lvl)
 
 # ขลุ่ยชาคุฮาจิ
 for t, nm, d in MELODY:
+    # เลื่อนทำนองท่อนแรกให้เริ่มที่ช่วงที่ 2 และท่อนหลังให้เริ่มที่ช่วงที่ 3
+    if t < 15.0:
+        t = t - 5.0 + S1
+        if t + d > S2:
+            continue
+    else:
+        t = t - 15.0 + S2
+    if t + d > BREAK:
+        continue
     lead.add(flute(nm, d + 0.05), t, 1.0, pan=0.1)
 
 # ---------- เสียงพิณกวาดสายตรงจุดเปลี่ยนฉาก ----------
 def chord_at(t):
     return CHORDS[int(t // 2) % 4][1]
 for c in cuts[:-1]:
-    big = c in (0.0, 5.0, 15.0)
+    big = c in (0.0, S1, S2)
     fx.add(strum(chord_at(c) + (['D5', 'A5'] if big else [])), c, 0.9 if big else 0.6, pan=-0.1)
 
 # ---------- เสียงลมฟิ้วก่อนเข้าช่วงใหม่ ----------
@@ -169,7 +181,7 @@ def riser(dur):
         p = i / n
         out[i:i + seg] = fft_filter(x[i:i + seg], lo=300 + 3000 * p, hi=800 + 7000 * p)
     return out * (t / dur) ** 2 * 0.35
-for t_hit, d in ((5.0, 1.5), (15.0, 2.0), (END, 2.5)):
+for t_hit, d in ((S1, min(1.5, S1)), (S2, 2.0), (END, 2.5)):
     fx.add(riser(d), t_hit - d, 1.0)
 
 # ช่วงภาพเด่น: ขลุ่ยเสียงยาวค่อย ๆ ขึ้น
