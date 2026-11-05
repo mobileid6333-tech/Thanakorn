@@ -27,8 +27,8 @@ SHOTS="
 07877 0.3 1.5 none
 07878 3.0 1.5 none
 07879 6.0 2.0 none
-07756 2.0 2.3 zoom
-08269 2.5 4.7 end
+07756 2.0 2.5 zoom
+08269 2.5 4.5 end
 "
 printf 'MATSU HAND ROLL TACO' > $TMP/t1.txt
 printf 'WAMM MARKET FEST' > $TMP/t2.txt
@@ -56,8 +56,15 @@ fade=t=out:st=$(echo "$dur-0.4"|bc|sed "s/^\./0./"):d=0.4"
   echo "file 'p$i.mp4'" >> $TMP/list.txt
 done <<< "$SHOTS"
 
-ffmpeg -nostdin -v error -y -f concat -safe 0 -i $TMP/list.txt \
+# จุดเปลี่ยนฉาก (วินาที) สำหรับให้กลองตีตรงจังหวะ
+CUTS=$(echo "$SHOTS" | awk 'NF{printf "%s ", t+0; t+=$3}')
+python3 $OUT/music.py $TMP/music.wav 29.96 $CUTS
+
+# รวมภาพ + เสียงบรรยากาศจริง (เบาลง) + เพลง
+ffmpeg -nostdin -v error -y -f concat -safe 0 -i $TMP/list.txt -i $TMP/music.wav \
+  -filter_complex "[0:a]loudnorm=I=-26:TP=-6,volume=1.0[amb];[1:a]volume=0.9[mus];[amb][mus]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false[a]" \
+  -map 0:v -map "[a]" \
   -c:v libx264 -preset slow -crf 19 -pix_fmt yuv420p -r 25 -movflags +faststart \
-  -af "loudnorm=I=-16:TP=-1.5:LRA=11" -c:a aac -b:a 192k -ar 48000 -t 29.96 \
+  -c:a aac -b:a 192k -ar 48000 -t 29.96 \
   $OUT/MATSU_HandRollTaco_9x16.mp4
 echo done
