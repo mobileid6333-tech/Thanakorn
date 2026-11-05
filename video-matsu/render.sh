@@ -60,9 +60,9 @@ done <<< "$SHOTS"
 CUTS=$(echo "$SHOTS" | awk 'NF{printf "%s ", t+0; t+=$3}')
 python3 $OUT/music.py $TMP/music.wav 29.96 $CUTS
 
-# รวมภาพ + เสียงบรรยากาศจริง (เบาลง) + เพลง
+# รวมภาพ + เพลง (ปิดเสียงจากกล้อง)
 ffmpeg -nostdin -v error -y -f concat -safe 0 -i $TMP/list.txt -i $TMP/music.wav \
-  -filter_complex "[0:a]loudnorm=I=-26:TP=-6,volume=1.0[amb];[1:a]volume=0.9[mus];[amb][mus]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false[a]" \
+  -filter_complex "[1:a]loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false[a]" \
   -map 0:v -map "[a]" \
   -c:v libx264 -preset slow -crf 19 -pix_fmt yuv420p -r 25 -movflags +faststart \
   -c:a aac -b:a 192k -ar 48000 -t 29.96 \
