@@ -60,3 +60,4 @@
 - โปรเจกต์ใช้ Next.js 16 คำแนะนำของ Next.js อยู่ใน @AGENTS.md ให้อ่านก่อนเขียนโค้ด
 - คำสั่ง: `npm run dev` (เปิดเว็บทดสอบที่ http://localhost:3000), `npm run lint`, `npm run build`
 - งานเสริม คลิป MATSU: ตัดคลิปแนวตั้ง 30 วินาทีเสร็จแล้ว (รอบที่ 1) ไฟล์ video-matsu/MATSU_HandRollTaco_9x16.mp4 ชุดคำสั่งอยู่ที่ video-matsu/render.sh (ไฟล์วิดีโอไม่ขึ้น GitHub เพราะใหญ่) รอผู้ใช้ติชม
+- คลิป MATSU รอบที่ 2: เปลี่ยนสีบรรทัด WAMM MARKET FEST ตอนปิดท้ายเป็นสีเหลือง #fcd543

@@ -46,7 +46,7 @@ while read id ss dur fx; do
     VF="$LOOK,colorchannelmixer=rr=0.5:gg=0.5:bb=0.5,\
 drawtext=fontfile=$FONT:textfile=$TMP/t1.txt:fontsize=76:fontcolor=white:x=(w-tw)/2:y=806:$A,\
 drawbox=x=440:y=916:w=200:h=4:color=0xE8C27A@1:t=fill:enable='gte(t,0.6)',\
-drawtext=fontfile=$FONT:textfile=$TMP/t2.txt:fontsize=58:fontcolor=0xE8C27A:x=(w-tw)/2:y=946:alpha='min(1,max(0,(t-0.7)/0.5))',\
+drawtext=fontfile=$FONT:textfile=$TMP/t2.txt:fontsize=58:fontcolor=0xFCD543:x=(w-tw)/2:y=946:alpha='min(1,max(0,(t-0.7)/0.5))',\
 drawtext=fontfile=$FONT2:textfile=$TMP/t3.txt:fontsize=44:fontcolor=white:x=(w-tw)/2:y=1030:alpha='min(1,max(0,(t-1.0)/0.5))',\
 fade=t=out:st=$(echo "$dur-0.4"|bc|sed "s/^\./0./"):d=0.4"
   fi
