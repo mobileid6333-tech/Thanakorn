@@ -2,7 +2,7 @@
 # - ใช้ร่วมกับ engine.py แต่ไม่แก้ค่าของคลิปขอนแก่น 3 คลิปเดิม
 # - ฟอนต์ Kanit ทั้งหมด / ข้อความขาว คำเด่นทอง #FCD543 / พื้นดำเป็นฐาน ทองเป็นสีเน้น
 # - ข้อความวางบนแถบดำโปร่งที่ค่อย ๆ จางออก (ไม่มีกรอบทึบ)
-# - ฉากจบพื้นดำ MATSU สีทอง + "Make It Meaningful."
+# - ฉากจบพื้นดำ MATSU สีทอง + ชื่อสาขา
 import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -59,8 +59,11 @@ def caption(path, parts, size=66):
     im.save(path)
 
 
-def end_card(path):
-    """ฉากจบ: พื้นดำ แสงอุ่นจาง ๆ ตรงกลาง  โลโก้ (หรือคำว่า MATSU ชั่วคราว) + Make It Meaningful."""
+BRANCH = 'สาขาอุบลราชธานี'     # ชื่อสาขาในฉากจบ
+
+
+def end_card(path, branch=BRANCH):
+    """ฉากจบ: พื้นดำ แสงอุ่นจาง ๆ ตรงกลาง  โลโก้ (หรือคำว่า MATSU ชั่วคราว) + ชื่อสาขา"""
     yy, xx = np.mgrid[0:H, 0:W]
     r = np.sqrt(((xx - W / 2) / W) ** 2 + ((yy - H * 0.46) / H) ** 2)
     glow = np.clip(1 - r / 0.55, 0, 1) ** 2
@@ -89,13 +92,13 @@ def end_card(path):
         gold.putalpha(mask)
         im.alpha_composite(gold)
         bottom = cy + (y1 - y0) / 2
-    # เส้นทองบาง ๆ + คำขวัญ
+    # เส้นทองบาง ๆ + ชื่อสาขา (ภาษาไทย ไม่เว้นระยะตัวอักษร เพื่อให้สระ/วรรณยุกต์ถูกที่)
     ly = int(bottom + 70)
     d.rectangle([W // 2 - 60, ly, W // 2 + 60, ly + 2], fill=GOLD)
-    f2 = _font(FONT_SEMI, 40)
-    sp2 = 6
-    w2 = _spaced_width(d, 'Make It Meaningful.', f2, sp2)
-    _spaced(d, ((W - w2) / 2, ly + 50), 'Make It Meaningful.', f2, GOLD, sp2)
+    f2 = _font(FONT_SEMI, 52)
+    w2 = d.textlength(branch, font=f2)
+    _, by0, _, _ = f2.getbbox(branch)
+    d.text(((W - w2) / 2, ly + 46 - by0), branch, font=f2, fill=GOLD)
     im.convert('RGB').save(path)
 
 
