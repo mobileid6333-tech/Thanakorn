@@ -131,7 +131,7 @@ def _run(args):
 
 
 def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None):
-    """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง)]
+    """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า])]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
     pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป"""
     if size:
@@ -139,7 +139,10 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
     tmp = os.path.join(HERE, tmp_name)
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     parts, cuts, sounds, t = [], [], [], 0.0
-    for i, (name, ss, ln, zoom, cap, vol) in enumerate(shots):
+    default_slow = slow
+    for i, shot in enumerate(shots):
+        name, ss, ln, zoom, cap, vol = shot[:6]
+        slow = shot[6] if len(shot) > 6 else default_slow     # ช่องที่ 7 (ถ้ามี) = ความช้าเฉพาะช็อตนี้
         dur = ln * slow
         length = dur + XF
         frames = round(length * 25)
