@@ -21,7 +21,9 @@ W, H = 1080, 1920
 
 # โทนสีภาพ: อุ่นสีอำพัน เงามืดลึกกว่าคลิปขอนแก่น แต่สีอาหารยังธรรมชาติ
 engine.TARGET_LUMA = 0.29
-engine.TARGET_RG, engine.TARGET_BG = 1.38, 0.74
+engine.TARGET_RG, engine.TARGET_BG = 1.46, 0.66
+# โทนอุ่นเพิ่ม: ส่วนมืดออกน้ำตาล ส่วนกลาง/สว่างออกส้มทองอ่อน ๆ (ผู้ใช้ขอโทนวอมขึ้น)
+WARM = 'colorbalance=rs=0.03:bs=-0.05:rm=0.05:gm=0.01:bm=-0.06:rh=0.03:bh=-0.04'
 
 
 def _font(path, size):
@@ -132,7 +134,7 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70)
         length = dur + XF
         frames = round(length * 25)
         g, y = engine.grade(name, ss, ln)
-        vf = (f'setpts={slow}*PTS,fps=25,scale=1080:1920,setsar=1,{g},scale=2160:3840:flags=lanczos,'
+        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,fps=25,scale=1080:1920,setsar=1,{g},{WARM},scale=2160:3840:flags=lanczos,'
               f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1080x1920:fps=25")
         inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
@@ -184,6 +186,9 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70)
     _run(inputs + ['-filter_complex', chain, '-map', prev, '-map', '[a]',
                    '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '25',
                    '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-t', f'{total}', final])
+    vd = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries',
+                               'stream=duration', '-of', 'csv=p=0', final], capture_output=True, text=True).stdout)
+    assert abs(vd - total) < 0.2, f'ภาพยาว {vd} ไม่ตรงกับ {total}'
     shutil.rmtree(tmp)
     print(f'done {final}  ยาว {total:.2f} วิ')
 
