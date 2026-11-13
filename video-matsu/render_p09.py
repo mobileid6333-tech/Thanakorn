@@ -1,4 +1,5 @@
-# คลิป 9: From Chef to You — จากมือเชฟสู่มื้อพิเศษ (สาขาอุบล) ยาว 15 วินาที
+# คลิป 9: From Chef to You — จากมือเชฟสู่มื้อพิเศษ ยาว 15 วินาที
+# ฉากจบ: สาขาขอนแก่น (ค่าเริ่มต้น) — ทำเวอร์ชันอุบล: BRANCH=สาขาอุบลราชธานี python3 render_p09.py
 # วิธีใช้: python3 render_p09.py   (หน้าตา/ภาพช้า/เพลง อยู่ใน premium.py และ premium_music.py)
 # รอบที่ 2: จังหวะเร็วขึ้น — ภาพช้า 1.5 เท่า ช็อตละ 1.2 วิ (= 2 จังหวะของเพลง 100 BPM)
 import os
@@ -18,4 +19,6 @@ SHOTS = [
      [('จากมือเชฟ ', 'white'), ('สู่มื้อของคุณ', 'gold')], 0),
     ('d6a52f13', 0.30, 1.2, 0.025, None, 0),     # C0096_3 ลูกค้ากัดคำแรก
 ]
-build(SHOTS, os.path.join(HERE, 'ubon', 'MATSU_09_FromChefToYou.mp4'), 'parts_p09', slow=SLOW, bpm=100)
+BRANCH = os.environ.get('BRANCH', 'สาขาขอนแก่น')
+OUT = 'ubon' if 'อุบล' in BRANCH else 'khonkaen'
+build(SHOTS, os.path.join(HERE, OUT, 'MATSU_09_FromChefToYou.mp4'), 'parts_p09', slow=SLOW, bpm=100, branch=BRANCH)
