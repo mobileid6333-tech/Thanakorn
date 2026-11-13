@@ -121,20 +121,20 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง)]
-    ความยาวในคลิป = ยาว x 2 (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]"""
+    ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]"""
     tmp = os.path.join(HERE, tmp_name)
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     parts, cuts, sounds, t = [], [], [], 0.0
     for i, (name, ss, ln, zoom, cap, vol) in enumerate(shots):
-        dur = ln * SLOW
+        dur = ln * slow
         length = dur + XF
         frames = round(length * 25)
         g, y = engine.grade(name, ss, ln)
-        vf = (f'setpts={SLOW}*PTS,fps=25,scale=1080:1920,setsar=1,{g},scale=2160:3840:flags=lanczos,'
+        vf = (f'setpts={slow}*PTS,fps=25,scale=1080:1920,setsar=1,{g},scale=2160:3840:flags=lanczos,'
               f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1080x1920:fps=25")
-        inp = ['-ss', f'{ss}', '-t', f'{length / SLOW + 0.1}', '-i', src(name)]
+        inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
         out = '[b0]'
         if cap:
@@ -149,7 +149,7 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH):
         if vol:
             a = os.path.join(tmp, f'a{i:02d}.wav')
             _run(['-ss', f'{ss}', '-t', f'{ln}', '-i', src(name), '-vn',
-                  '-af', f'atempo=0.5,volume={vol},afade=t=in:d=0.15,afade=t=out:st={dur - 0.3:.2f}:d=0.3',
+                  '-af', f'atempo={1 / slow:.4f},volume={vol},afade=t=in:d=0.15,afade=t=out:st={dur - 0.3:.2f}:d=0.3',
                   '-ar', '48000', '-ac', '2', a])
             sounds.append((a, t))
         parts.append(p); cuts.append(t); t += dur
@@ -164,7 +164,8 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH):
     parts.append(p); cuts.append(t); end_at = t; total = t + end_len
 
     music = os.path.join(tmp, 'music.wav')
-    subprocess.run(['python3', os.path.join(HERE, 'premium_music.py'), music, f'{total}', f'{end_at}'], check=True)
+    subprocess.run(['python3', os.path.join(HERE, 'premium_music.py'), music, f'{total}', f'{end_at}'], check=True,
+                   env={**os.environ, 'BPM': str(bpm)})
     inputs, chain, prev = [], '', '[0:v]'
     for q in parts:
         inputs += ['-i', q]
