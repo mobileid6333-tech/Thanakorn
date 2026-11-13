@@ -112,6 +112,13 @@ XF = 0.12           # ภาพจางระหว่างช็อต (ว�
 CAP_Y = int(H * 0.72)
 
 
+def set_size(w, h):
+    """เปลี่ยนขนาดคลิป: (1080, 1920) = แนวตั้ง (ค่าเริ่มต้น), (1920, 1080) = แนวนอน"""
+    global W, H, CAP_Y
+    W, H = w, h
+    CAP_Y = int(H * 0.72)
+
+
 def src(name):
     return sorted(glob.glob(f'{SRC}/*{name}*'))[0]
 
@@ -123,10 +130,12 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre=''):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง)]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
-    pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง"""
+    pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป"""
+    if size:
+        set_size(*size)
     tmp = os.path.join(HERE, tmp_name)
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     parts, cuts, sounds, t = [], [], [], 0.0
@@ -135,8 +144,8 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
         length = dur + XF
         frames = round(length * 25)
         g, y = engine.grade(name, ss, ln)
-        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,{pre + "," if pre else ""}fps=25,scale=1080:1920,setsar=1,{g},{WARM},scale=2160:3840:flags=lanczos,'
-              f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1080x1920:fps=25")
+        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,{pre + "," if pre else ""}fps=25,scale={W}:{H},setsar=1,{g},{WARM},scale={2 * W}:{2 * H}:flags=lanczos,'
+              f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s={W}x{H}:fps=25")
         inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
         out = '[b0]'
