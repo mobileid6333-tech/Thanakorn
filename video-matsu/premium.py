@@ -123,9 +123,10 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre=''):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง)]
-    ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]"""
+    ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
+    pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง"""
     tmp = os.path.join(HERE, tmp_name)
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     parts, cuts, sounds, t = [], [], [], 0.0
@@ -134,7 +135,7 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70)
         length = dur + XF
         frames = round(length * 25)
         g, y = engine.grade(name, ss, ln)
-        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,fps=25,scale=1080:1920,setsar=1,{g},{WARM},scale=2160:3840:flags=lanczos,'
+        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,{pre + "," if pre else ""}fps=25,scale=1080:1920,setsar=1,{g},{WARM},scale=2160:3840:flags=lanczos,'
               f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1080x1920:fps=25")
         inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
