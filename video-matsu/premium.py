@@ -3,7 +3,7 @@
 # - ฟอนต์ Kanit ทั้งหมด / ข้อความขาว คำเด่นทอง #FCD543 / พื้นดำเป็นฐาน ทองเป็นสีเน้น
 # - ข้อความวางบนแถบดำโปร่งที่ค่อย ๆ จางออก (ไม่มีกรอบทึบ)
 # - ฉากจบพื้นดำ MATSU สีทอง + ชื่อสาขา
-import os
+import glob, os, shutil, subprocess
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -100,6 +100,91 @@ def end_card(path, branch=BRANCH):
     _, by0, _, _ = f2.getbbox(branch)
     d.text(((W - w2) / 2, ly + 46 - by0), branch, font=f2, fill=GOLD)
     im.convert('RGB').save(path)
+
+
+# ---------- ประกอบคลิป ----------
+# โฟลเดอร์ฟุตเทจสาขาอุบล (ไฟล์ที่ผู้ใช้อัปโหลด) — เปลี่ยนได้ด้วยตัวแปร MATSU_SRC
+SRC = os.environ.get('MATSU_SRC', '/root/.claude/uploads/61b06ac1-a793-5aee-9c3b-075edfb9ae9d')
+SLOW = 2.0          # ฟุตเทจ 50 ภาพ/วินาที เล่นที่ 25 = ภาพช้า 2 เท่า แต่ยังลื่น
+XF = 0.12           # ภาพจางระหว่างช็อต (วินาที)
+CAP_Y = int(H * 0.72)
+
+
+def src(name):
+    return sorted(glob.glob(f'{SRC}/*{name}*'))[0]
+
+
+engine.src = src    # ให้ส่วนปรับแสง/สีของ engine.py อ่านฟุตเทจชุดนี้
+
+
+def _run(args):
+    subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
+
+
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH):
+    """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง)]
+    ความยาวในคลิป = ยาว x 2 (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]"""
+    tmp = os.path.join(HERE, tmp_name)
+    shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+    parts, cuts, sounds, t = [], [], [], 0.0
+    for i, (name, ss, ln, zoom, cap, vol) in enumerate(shots):
+        dur = ln * SLOW
+        length = dur + XF
+        frames = round(length * 25)
+        g, y = engine.grade(name, ss, ln)
+        vf = (f'setpts={SLOW}*PTS,fps=25,scale=1080:1920,setsar=1,{g},scale=2160:3840:flags=lanczos,'
+              f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s=1080x1920:fps=25")
+        inp = ['-ss', f'{ss}', '-t', f'{length / SLOW + 0.1}', '-i', src(name)]
+        fc = f'[0:v]{vf}[b0]'
+        out = '[b0]'
+        if cap:
+            png = os.path.join(tmp, f'c{i:02d}.png'); caption(png, cap)
+            inp += ['-loop', '1', '-t', f'{length}', '-i', png]
+            fc += (f';[1:v]format=rgba,fade=t=in:st=0.25:d=0.4:alpha=1,'
+                   f'fade=t=out:st={dur - 0.45:.2f}:d=0.4:alpha=1[o];[b0][o]overlay=0:{CAP_Y}:shortest=1[b1]')
+            out = '[b1]'
+        p = os.path.join(tmp, f'p{i:02d}.mp4')
+        _run(inp + ['-filter_complex', fc, '-map', out, '-an', '-frames:v', str(frames),
+                    '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', p])
+        if vol:
+            a = os.path.join(tmp, f'a{i:02d}.wav')
+            _run(['-ss', f'{ss}', '-t', f'{ln}', '-i', src(name), '-vn',
+                  '-af', f'atempo=0.5,volume={vol},afade=t=in:d=0.15,afade=t=out:st={dur - 0.3:.2f}:d=0.3',
+                  '-ar', '48000', '-ac', '2', a])
+            sounds.append((a, t))
+        parts.append(p); cuts.append(t); t += dur
+        print(f'{i + 1:2d}/{len(shots)} {name:9} {cuts[-1]:5.2f}s  ยาว {dur:.2f}s  แสงเดิม {y:.2f}', flush=True)
+
+    # ฉากจบ: ภาพดำค่อย ๆ สว่างขึ้นเป็นโลโก้ + ชื่อสาขา
+    endpng = os.path.join(tmp, 'end.png'); end_card(endpng, branch)
+    p = os.path.join(tmp, 'pend.mp4')
+    _run(['-loop', '1', '-t', f'{end_len}', '-i', endpng, '-vf',
+          f'fps=25,format=yuv420p,fade=t=in:st=0:d=0.7', '-frames:v', str(round(end_len * 25)),
+          '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', p])
+    parts.append(p); cuts.append(t); end_at = t; total = t + end_len
+
+    music = os.path.join(tmp, 'music.wav')
+    subprocess.run(['python3', os.path.join(HERE, 'premium_music.py'), music, f'{total}', f'{end_at}'], check=True)
+    inputs, chain, prev = [], '', '[0:v]'
+    for q in parts:
+        inputs += ['-i', q]
+    for k in range(1, len(parts)):
+        chain += f'{prev}[{k}:v]xfade=transition=fade:duration={XF}:offset={cuts[k] - XF / 2:.3f}[v{k}];'
+        prev = f'[v{k}]'
+    inputs += ['-i', music]
+    mix = [f'[{len(parts)}:a]']
+    for j, (a, at) in enumerate(sounds):
+        inputs += ['-i', a]
+        chain += f'[{len(parts) + 1 + j}:a]adelay={int(at * 1000)}|{int(at * 1000)}[s{j}];'
+        mix.append(f'[s{j}]')
+    chain += (f'{"".join(mix)}amix=inputs={len(mix)}:normalize=0,'
+              'loudnorm=I=-15:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false[a]')
+    os.makedirs(os.path.dirname(final), exist_ok=True)
+    _run(inputs + ['-filter_complex', chain, '-map', prev, '-map', '[a]',
+                   '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '25',
+                   '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-t', f'{total}', final])
+    shutil.rmtree(tmp)
+    print(f'done {final}  ยาว {total:.2f} วิ')
 
 
 if __name__ == '__main__':
