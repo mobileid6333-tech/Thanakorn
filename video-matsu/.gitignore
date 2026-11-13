@@ -1,3 +1,4 @@
 parts/
 *.mp4
 __pycache__/
+*.zip
