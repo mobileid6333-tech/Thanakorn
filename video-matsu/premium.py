@@ -131,23 +131,24 @@ def _run(args):
 
 
 def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None):
-    """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า])]
+    """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า[, หมุน/ตัดภาพ]])]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
     pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป"""
     if size:
         set_size(*size)
-    tmp = os.path.join(HERE, tmp_name)
+    tmp = os.path.join(HERE, f'{tmp_name}_{os.path.basename(os.path.dirname(final))}')   # แยกตามสาขา ทำพร้อมกันได้
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     parts, cuts, sounds, t = [], [], [], 0.0
     default_slow = slow
     for i, shot in enumerate(shots):
         name, ss, ln, zoom, cap, vol = shot[:6]
         slow = shot[6] if len(shot) > 6 else default_slow     # ช่องที่ 7 (ถ้ามี) = ความช้าเฉพาะช็อตนี้
+        spre = shot[7] if len(shot) > 7 else pre               # ช่องที่ 8 (ถ้ามี) = หมุน/ตัดภาพเฉพาะช็อตนี้
         dur = ln * slow
         length = dur + XF
         frames = round(length * 25)
         g, y = engine.grade(name, ss, ln)
-        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,{pre + "," if pre else ""}fps=25,scale={W}:{H},setsar=1,{g},{WARM},scale={2 * W}:{2 * H}:flags=lanczos,'
+        vf = (f'setpts={slow}*PTS,tpad=stop_mode=clone:stop_duration=1,{spre + "," if spre else ""}fps=25,scale={W}:{H},setsar=1,{g},{WARM},scale={2 * W}:{2 * H}:flags=lanczos,'
               f"zoompan=z='1+{zoom}*on/{frames}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=1:s={W}x{H}:fps=25")
         inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
