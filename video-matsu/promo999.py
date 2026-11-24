@@ -87,6 +87,23 @@ def end_overlay(path, branch, headline=('คัดมาแล้ว', 'ทุ�
     im.save(path)
 
 
+def text_card(path, l1, l2, gold_line=2):
+    """ข้อความ 2 บรรทัด ตัวใหญ่ กึ่งกลางจอ บนแถบดำโปร่งที่จางขอบ (ใช้แทนเสียงพากย์)"""
+    band = 330
+    im = Image.new('RGBA', (W, band), (0, 0, 0, 0))
+    a = np.sin(np.linspace(0, np.pi, band)) ** 1.3 * 150
+    im.putalpha(Image.fromarray(np.repeat(a[:, None], W, 1).astype(np.uint8)))
+    d = ImageDraw.Draw(im)
+    for k, (ln, yb, size) in enumerate([(l1, 136, 74), (l2, 250, 90)], start=1):
+        if not ln:
+            continue
+        col = GOLD if k == gold_line else WHITE
+        th, la = _fonts(400, size)
+        w = sum(d.textlength(r, font=th if t else la) for r, t in _runs(ln))
+        text(d, ((W - w) / 2, yb), ln, 400, size, col)
+    im.save(path)
+
+
 if __name__ == '__main__':
     import subprocess, sys
     src, ss = sys.argv[1], sys.argv[2]

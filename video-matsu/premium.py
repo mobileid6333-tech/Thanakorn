@@ -130,10 +130,11 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None, end_overlay=None):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None, end_overlay=None, texts=None):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า[, หมุน/ตัดภาพ]])]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
     pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป
+    texts = [(เริ่มวิ, จบวิ, ฟังก์ชันสร้างภาพ(path), y)] ข้อความวางทับตามเวลา ไม่ผูกกับช็อต
     end_overlay = ฟังก์ชันสร้างภาพโปร่งใสเต็มจอ (path) → วางทับช็อตสุดท้ายแทนฉากจบพื้นดำ (ใช้กับคลิปโปร)"""
     if size:
         set_size(*size)
@@ -197,11 +198,18 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
     for k in range(1, len(parts)):
         chain += f'{prev}[{k}:v]xfade=transition=fade:duration={XF}:offset={cuts[k] - XF / 2:.3f}[v{k}];'
         prev = f'[v{k}]'
+    n_in = len(parts)
+    for j, (t0, t1, make, ty) in enumerate(texts or []):
+        png = os.path.join(tmp, f'tx{j:02d}.png'); make(png)
+        inputs += ['-loop', '1', '-t', f'{total}', '-i', png]
+        chain += (f'[{n_in}:v]format=rgba,fade=t=in:st={t0}:d=0.25:alpha=1,fade=t=out:st={t1 - 0.25}:d=0.25:alpha=1[tx{j}];'
+                  f'{prev}[tx{j}]overlay=0:{ty}:shortest=1[vt{j}];')
+        prev = f'[vt{j}]'; n_in += 1
     inputs += ['-i', music]
-    mix = [f'[{len(parts)}:a]']
+    mix = [f'[{n_in}:a]']
     for j, (a, at) in enumerate(sounds):
         inputs += ['-i', a]
-        chain += f'[{len(parts) + 1 + j}:a]adelay={int(at * 1000)}|{int(at * 1000)}[s{j}];'
+        chain += f'[{n_in + 1 + j}:a]adelay={int(at * 1000)}|{int(at * 1000)}[s{j}];'
         mix.append(f'[s{j}]')
     chain += (f'{"".join(mix)}amix=inputs={len(mix)}:normalize=0,'
               'loudnorm=I=-15:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false[a]')
