@@ -130,10 +130,11 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None, end_overlay=None):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า[, หมุน/ตัดภาพ]])]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
-    pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป"""
+    pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป
+    end_overlay = ฟังก์ชันสร้างภาพโปร่งใสเต็มจอ (path) → วางทับช็อตสุดท้ายแทนฉากจบพื้นดำ (ใช้กับคลิปโปร)"""
     if size:
         set_size(*size)
     tmp = os.path.join(HERE, f'{tmp_name}_{os.path.basename(os.path.dirname(final))}')   # แยกตามสาขา ทำพร้อมกันได้
@@ -153,6 +154,11 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
         inp = ['-ss', f'{ss}', '-t', f'{length / slow + 0.1}', '-i', src(name)]
         fc = f'[0:v]{vf}[b0]'
         out = '[b0]'
+        if end_overlay and i == len(shots) - 1:          # ช็อตสุดท้าย: ฉากจบโปรค่อย ๆ ขึ้นทับภาพ
+            png = os.path.join(tmp, 'endov.png'); end_overlay(png)
+            inp += ['-loop', '1', '-t', f'{length}', '-i', png]
+            fc += f';[1:v]format=rgba,fade=t=in:st=0.3:d=0.8:alpha=1[eo];[b0][eo]overlay=0:0:shortest=1[be]'
+            out = '[be]'
         if cap:
             png = os.path.join(tmp, f'c{i:02d}.png'); caption(png, cap)
             inp += ['-loop', '1', '-t', f'{length}', '-i', png]
@@ -171,13 +177,16 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
         parts.append(p); cuts.append(t); t += dur
         print(f'{i + 1:2d}/{len(shots)} {name:9} {cuts[-1]:5.2f}s  ยาว {dur:.2f}s  แสงเดิม {y:.2f}', flush=True)
 
-    # ฉากจบ: ภาพดำค่อย ๆ สว่างขึ้นเป็นโลโก้ + ชื่อสาขา
-    endpng = os.path.join(tmp, 'end.png'); end_card(endpng, branch)
-    p = os.path.join(tmp, 'pend.mp4')
-    _run(['-loop', '1', '-t', f'{end_len}', '-i', endpng, '-vf',
-          f'fps=25,format=yuv420p,fade=t=in:st=0:d=0.7', '-frames:v', str(round(end_len * 25)),
-          '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', p])
-    parts.append(p); cuts.append(t); end_at = t; total = t + end_len
+    if end_overlay:
+        end_at, total = cuts[-1] + 0.3, t
+    else:
+        # ฉากจบ: ภาพดำค่อย ๆ สว่างขึ้นเป็นโลโก้ + ชื่อสาขา
+        endpng = os.path.join(tmp, 'end.png'); end_card(endpng, branch)
+        p = os.path.join(tmp, 'pend.mp4')
+        _run(['-loop', '1', '-t', f'{end_len}', '-i', endpng, '-vf',
+              f'fps=25,format=yuv420p,fade=t=in:st=0:d=0.7', '-frames:v', str(round(end_len * 25)),
+              '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', p])
+        parts.append(p); cuts.append(t); end_at = t; total = t + end_len
 
     music = os.path.join(tmp, 'music.wav')
     subprocess.run(['python3', os.path.join(HERE, 'premium_music.py'), music, f'{total}', f'{end_at}'], check=True,
