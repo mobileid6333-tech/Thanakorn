@@ -3,7 +3,7 @@
 # ฟอนต์ Kanit ตัวบาง (Light/ExtraLight) ได้จากแพ็กเกจฟรี @fontsource/kanit (ไฟล์ .woff แยกชุดอักษรไทย/อังกฤษ)
 import os
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 F = os.path.join(HERE, 'fonts')
@@ -58,15 +58,13 @@ def text(d, xy, s, weight, size, fill, anchor='l', spacing=0):
 def end_overlay(path, branch, headline=('คัดมาแล้ว', 'ทุกคำ')):
     """ภาพโปร่งใส 1080x1920 วางทับวิดีโอช่วงท้าย (เหมือนครึ่งล่างของโปสเตอร์)"""
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    # ไล่สีดำจากกลางจอลงล่าง
-    y = np.arange(H)[:, None]
-    a = np.clip((y - H * 0.30) / (H * 0.28), 0, 1) ** 1.2 * 245
-    shade = np.zeros((H, W, 4), np.uint8); shade[..., 3] = np.repeat(a, W, 1).astype(np.uint8)
-    im.alpha_composite(Image.fromarray(shade, 'RGBA'))
+    # ไม่มีแถบไล่สีดำ (ผู้ใช้สั่ง) — ใช้เงาจาง ๆ ใต้ตัวหนังสือแทนให้อ่านออกบนภาพ
     # โลโก้มุมซ้ายบน
     if os.path.exists(LOGO):
         lg = Image.open(LOGO).convert('RGBA'); lg.thumbnail((150, 170))
         im.alpha_composite(lg, (64, 70))
+    base = im
+    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))      # ชั้นตัวหนังสือ (ทำเงาจากชั้นนี้)
     d = ImageDraw.Draw(im)
     L, R = 70, W - 70
     # เรียงบนลงล่าง (จอแนวตั้งแคบกว่าโปสเตอร์): หัวเรื่อง → ขีดทอง → 999 NET/ท่าน → รายละเอียด
@@ -84,7 +82,12 @@ def end_overlay(path, branch, headline=('คัดมาแล้ว', 'ทุ�
     d.rectangle([L, 1782, R, 1783], fill=(255, 255, 255, 90))
     text(d, (L, 1852), f'MATSU {branch}', 400, 36, WHITE)
     text(d, (R, 1852), 'make it meaningful.', 300, 34, WHITE, 'r')
-    im.save(path)
+    a = np.asarray(im.getchannel('A'))
+    sh = Image.fromarray(a).filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(14))
+    shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    shadow.putalpha(sh.point(lambda v: min(255, int(v * 1.6))))
+    base.alpha_composite(shadow); base.alpha_composite(im)
+    base.save(path)
 
 
 def text_card(path, l1, l2, gold_line=2):
