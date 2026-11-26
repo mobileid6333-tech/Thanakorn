@@ -98,8 +98,12 @@ def text_card(path, l1, l2, gold_line=2):
         if not ln:
             continue
         col = GOLD if k == gold_line else WHITE
-        th, la = _fonts(400, size)
-        w = sum(d.textlength(r, font=th if t else la) for r, t in _runs(ln))
+        while True:                                   # ย่อขนาดเองถ้าบรรทัดยาวเกินขอบจอ
+            th, la = _fonts(400, size)
+            w = sum(d.textlength(r, font=th if t else la) for r, t in _runs(ln))
+            if w <= W - 110 or size <= 40:
+                break
+            size -= 2
         text(d, ((W - w) / 2, yb), ln, 400, size, col)
     im.save(path)
 
