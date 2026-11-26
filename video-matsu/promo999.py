@@ -108,6 +108,29 @@ def text_card(path, l1, l2, gold_line=2):
     im.save(path)
 
 
+def logo_card(path, branch):
+    """ฉากโลโก้ปิดท้าย: พื้นดำแสงอุ่นจาง ๆ  โลโก้ MATSU ใหญ่กลางจอ + ชื่อสาขา + make it meaningful."""
+    yy, xx = np.mgrid[0:H, 0:W]
+    r = np.sqrt(((xx - W / 2) / W) ** 2 + ((yy - H * 0.45) / H) ** 2)
+    glow = np.clip(1 - r / 0.55, 0, 1) ** 2
+    im = Image.fromarray(np.stack([glow * 30, glow * 20, glow * 10], -1).astype(np.uint8), 'RGB').convert('RGBA')
+    lg = Image.open(LOGO).convert('RGBA'); lg.thumbnail((600, 690))
+    top = int(H * 0.45 - lg.height / 2 - 60)
+    im.alpha_composite(lg, ((W - lg.width) // 2, top))
+    d = ImageDraw.Draw(im)
+    y = top + lg.height + 70
+    d.rectangle([W // 2 - 60, y, W // 2 + 60, y + 2], fill=GOLD)
+    th, la = _fonts(400, 54)
+    s = f'สาขา{branch}'
+    w = sum(d.textlength(t, font=th if k else la) for t, k in _runs(s))
+    text(d, ((W - w) / 2, y + 95), s, 400, 54, GOLD)
+    s2 = 'make it meaningful.'
+    th, la = _fonts(300, 36)
+    w2 = d.textlength(s2, font=la)
+    text(d, ((W - w2) / 2, y + 165), s2, 300, 36, WHITE)
+    im.convert('RGB').save(path)
+
+
 if __name__ == '__main__':
     import subprocess, sys
     src, ss = sys.argv[1], sys.argv[2]

@@ -130,10 +130,11 @@ def _run(args):
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y'] + args, check=True)
 
 
-def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None, end_overlay=None, texts=None):
+def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70, pre='', size=None, end_overlay=None, texts=None, tail=None, tail_len=2.0):
     """shots = [(รหัสไฟล์, เริ่ม(วิในไฟล์), ยาว(วิในไฟล์), ซูม, ข้อความ|None, ความดังเสียงจริง[, ความช้า[, หมุน/ตัดภาพ]])]
     ความยาวในคลิป = ยาว x slow (ภาพช้า)  ข้อความ = [('ข้อความ','white'|'gold'), ...]
     pre = ตัวกรองภาพก่อนเริ่ม เช่น หมุนภาพแนวนอนเป็นแนวตั้ง   size = (กว้าง, สูง) ของคลิป
+    tail = ฟังก์ชันสร้างภาพฉากปิดท้าย (path) ต่อหลังช็อตสุดท้าย ยาว tail_len วิ (เช่น ฉากโลโก้)
     texts = [(เริ่มวิ, จบวิ, ฟังก์ชันสร้างภาพ(path), y)] ข้อความวางทับตามเวลา ไม่ผูกกับช็อต
     end_overlay = ฟังก์ชันสร้างภาพโปร่งใสเต็มจอ (path) → วางทับช็อตสุดท้ายแทนฉากจบพื้นดำ (ใช้กับคลิปโปร)"""
     if size:
@@ -180,6 +181,12 @@ def build(shots, final, tmp_name, end_len=3.0, branch=BRANCH, slow=SLOW, bpm=70,
 
     if end_overlay:
         end_at, total = cuts[-1] + 0.3, t
+        if tail:                                           # ฉากปิดท้ายเพิ่ม (เช่น โลโก้ใหญ่)
+            tpng = os.path.join(tmp, 'tail.png'); tail(tpng)
+            p = os.path.join(tmp, 'ptail.mp4')
+            _run(['-loop', '1', '-t', f'{tail_len + XF}', '-i', tpng, '-vf', 'fps=25,format=yuv420p',
+                  '-frames:v', str(round((tail_len + XF) * 25)), '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', p])
+            parts.append(p); cuts.append(t); total = t + tail_len
     else:
         # ฉากจบ: ภาพดำค่อย ๆ สว่างขึ้นเป็นโลโก้ + ชื่อสาขา
         endpng = os.path.join(tmp, 'end.png'); end_card(endpng, branch)

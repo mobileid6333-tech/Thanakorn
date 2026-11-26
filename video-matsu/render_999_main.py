@@ -5,7 +5,7 @@
 # วิธีใช้: BRANCH=อุบลราชธานี python3 render_999_main.py  (ค่าเริ่มต้น ขอนแก่น)
 import os
 from premium import build, HERE
-from promo999 import end_overlay, text_card
+from promo999 import end_overlay, text_card, logo_card
 
 BRANCH = os.environ.get('BRANCH', 'ขอนแก่น')
 OUT = 'ubon' if 'อุบล' in BRANCH else 'khonkaen'
@@ -26,7 +26,7 @@ SHOTS = [  # ใช้เฉพาะฟุตเทจชุดล่าสุ�
     ('3313532d', 0.00, 1.00, 0.02, None, 0, 1.5),     # ภาพกว้างของร้าน
     ('72c76447', 0.00, 1.50, 0.025, None, 0, 1.5),    # ลูกค้ากินกุ้ง
     ('16f1b174', 0.40, 1.80, 0.025, None, 0, 1.5),    # ลูกค้ายกแก้ว หัวเราะ
-    ('45c34f43', 0.00, 2.36, 0.02, None, 0, 2.5),     # ฉากจบ: ซาชิมิฮามาจิ + ข้อความโปร
+    ('45c34f43', 0.00, 1.56, 0.02, None, 0, 2.5),     # ฉากราคา: ซาชิมิฮามาจิ + ข้อความโปร (ต่อด้วยฉากโลโก้ 2 วิ)
 ]
 Y = 1140   # ตำแหน่งแถบข้อความ (จากด้านบน)
 LINES = [  # (เริ่ม, จบ, บรรทัด 1, บรรทัด 2 สีทอง) — ย่อจากบทพากย์
@@ -41,4 +41,4 @@ LINES = [  # (เริ่ม, จบ, บรรทัด 1, บรรทัด 
 ]
 TEXTS = [(a, b, (lambda p, l1=l1, l2=l2: text_card(p, l1, l2)), Y) for a, b, l1, l2 in LINES]
 build(SHOTS, os.path.join(HERE, 'promo999_out', OUT, 'MATSU999_01_Main30s.mp4'), 'parts_999main',
-      bpm=100, end_overlay=lambda p: end_overlay(p, BRANCH), texts=TEXTS)
+      bpm=100, end_overlay=lambda p: end_overlay(p, BRANCH), texts=TEXTS, tail=lambda p: logo_card(p, BRANCH))
